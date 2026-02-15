@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindStep Pro | מהדורת מובייל מלאה</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        :root {
+            --sidebar-dark: #0f172a;
+            --accent-blue: #0ea5e9;
+            --bg-light: #f8fafc;
+        }
+
+        body {
+            font-family: 'Heebo', sans-serif;
+            background-color: var(--bg-light);
+            margin: 0;
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- Sidebar & Mobile Overlay --- */
+        #sidebar {
+            width: 280px;
+            background: var(--sidebar-dark);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            right: 0;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem 1.5rem;
+            z-index: 1050;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #sidebar-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            z-index: 1040;
+        }
+
+        /* --- Main Layout --- */
+        #main-content {
+            flex-grow: 1;
+            margin-right: 280px;
+            padding: 2rem;
+            transition: margin 0.3s ease;
+        }
+
+        /* --- Mobile Responsive Rules --- */
+        @media (max-width: 992px) {
+            #sidebar { transform: translateX(100%); }
+            #sidebar.active { transform: translateX(0); }
+            #sidebar.active + #sidebar-overlay { display: block; }
+            #main-content { margin-right: 0; padding: 1rem; padding-top: 5rem; }
+            .mobile-header { display: flex !important; }
+        }
+
+        .mobile-header {
+            display: none;
+            position: fixed;
+            top: 0; right: 0; left: 0;
+            background: white;
+            padding: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* --- Cards & UI --- */
+        .game-card {
+            background: white;
+            border-radius: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.05);
+            max-width: 800px;
+            margin: 0 auto;
+            overflow: hidden;
+            border: none;
+        }
+
+        .card-header-main {
+            background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+            padding: 2.5rem 1.5rem;
+            color: white;
+            text-align: center;
+        }
+
+        .option-item {
+            border: 2px solid #e2e8f0;
+            border-radius: 15px;
+            padding: 1.2rem;
+            margin-bottom: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .option-item:hover { border-color: var(--accent-blue); background: #f0f9ff; }
+        .option-item.selected { border-color: var(--accent-blue); background: #e0f2fe; color: #0369a1; font-weight: 700; }
+
+        .btn-game { padding: 1rem; border-radius: 15px; font-weight: 700; font-size: 1.1rem; }
+        .hidden { display: none !important; }
+
+        .stat-badge {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-right: 4px solid var(--accent-blue);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-header">
+        <h4 class="m-0 fw-black">MindStep 🧠</h4>
+        <button class="btn btn-outline-dark" onclick="toggleSidebar()">☰</button>
+    </div>
+
+    <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <aside id="sidebar">
+        <h2 class="fw-black mb-5">MindStep <span class="text-info">Pro</span></h2>
+        
+        <div class="stat-badge">
+            <small class="opacity-50">שלב</small>
+            <div class="h5 m-0 fw-bold" id="side-stage-name">-</div>
+        </div>
+        
+        <div class="stat-badge">
+            <small class="opacity-50">ניקוד</small>
+            <div class="h4 m-0 fw-bold text-info" id="side-score">0</div>
+        </div>
+
+        <div class="mt-auto">
+            <button class="btn btn-outline-danger w-100 fw-bold py-3" onclick="resetGame()">
+                ⚠️ איפוס התקדמות
+            </button>
+        </div>
+    </aside>
+
+    <main id="main-content">
+        <div class="game-card">
+            <div class="card-header-main">
+                <span class="badge bg-white text-primary mb-2 px-3 py-2" id="ui-stage-badge">שלב 1</span>
+                <h2 id="ui-title" class="fw-black m-0">טוען...</h2>
+            </div>
+
+            <div class="card-body p-4 p-md-5">
+                <div class="progress mb-4" style="height: 8px;">
+                    <div id="ui-progress" class="progress-bar bg-info" style="width: 0%"></div>
+                </div>
+
+                <div id="ui-timer-box" class="text-center mb-4 hidden">
+                    <span class="badge bg-danger p-2 fs-6">⏳ זמן: <span id="ui-time">0</span></span>
+                </div>
+
+                <div id="sec-learning">
+                    <div class="p-4 bg-light rounded-4 text-center mb-4 border">
+                        <p class="h3 fw-normal" id="ui-fact"></p>
+                    </div>
+                    <button class="btn btn-primary btn-game w-100" onclick="nextFact()">הבנתי, הבא ➔</button>
+                </div>
+
+                <div id="sec-quiz" class="hidden">
+                    <h4 id="ui-question" class="mb-4 fw-bold"></h4>
+                    <div id="ui-options"></div>
+                    <div id="ui-feedback" class="text-center my-3 fw-bold"></div>
+                    <button id="ui-quiz-btn" class="btn btn-primary btn-game w-100 mt-3" onclick="checkQuiz()">אשר תשובה</button>
+                </div>
+
+                <div id="sec-victory" class="hidden text-center py-4">
+                    <h1 class="display-3">🏆</h1>
+                    <h2 class="fw-black text-primary">כל הכבוד!</h2>
+                    <p class="h5 text-muted mb-4" id="ui-victory-msg"></p>
+                    <button class="btn btn-success btn-game px-5" onclick="startNextStage()">המשך לשלב הבא</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+<script>
+    // --- נתונים מורחבים (4 לכל שלב) ---
+const stages = [
+    // --- שלבי התחלה: ישראל ומורשת ---
+    {
+        name: "היסטוריה וישראל",
+        type: "normal",
+        data: [
+            { fact: "דוד בן גוריון הכריז על הקמת המדינה בשנת 1948.", question: "באיזו שנה הוקמה המדינה?", options: ["1947", "1948", "1949", "1950"], answer: "1948" },
+            { fact: "הכנרת היא ימת המים המתוקים הגדולה בישראל.", question: "מהי הימה הגדולה בישראל?", options: ["ים המלח", "הכנרת", "הים התיכון", "ים סוף"], answer: "הכנרת" },
+            { fact: "ירושלים היא עיר הבירה של מדינת ישראל.", question: "מהי בירת ישראל?", options: ["תל אביב", "חיפה", "ירושלים", "באר שבע"], answer: "ירושלים" },
+            { fact: "חטיבת גולני חובשת כומתה חומה המייצגת אדמה.", question: "מה צבע הכומתה של גולני?", options: ["ירוק", "אדום", "חום", "שחור"], answer: "חום" }
+        ]
+    },
+
+    // --- לוגיקה ומחשבים ---
+    {
+        name: "לוגיקה דיגיטלית (בונוס זמן!)",
+        type: "timed",
+        timeLimit: 25,
+        data: [
+            { fact: "שער לוגי מסוג AND מוציא '1' רק אם כל הכניסות הן '1'.", question: "מתי שער AND מוציא אמת?", options: ["כשכניסה אחת אמת", "כשכל הכניסות אמת", "כשאין כניסות", "תמיד"], answer: "כשכל הכניסות אמת" },
+            { fact: "שער NOT הופך את הכניסה: 0 הופך ל-1, ו-1 הופך ל-0.", question: "מה עושה שער NOT לכניסה של '0'?", options: ["משאיר 0", "הופך ל-1", "מכבה את המערכת", "מוציא תקלה"], answer: "הופך ל-1" },
+            { fact: "מערכת בינארית מבוססת על שתי ספרות בלבד: 0 ו-1.", question: "כמה ספרות יש בבסיס הבינארי?", options: ["10", "2", "8", "16"], answer: "2" },
+            { fact: "שער OR מוציא '1' אם לפחות אחת הכניסות היא '1'.", question: "מתי שער OR מוציא אמת?", options: ["רק כשכל הכניסות 1", "כשכל הכניסות 0", "כשלפחות כניסה אחת היא 1", "אף פעם"], answer: "כשלפחות כניסה אחת היא 1" }
+        ]
+    },
+    // 
+
+    // --- גוף האדם ---
+    {
+        name: "גוף האדם",
+        type: "normal",
+        data: [
+            { fact: "הלב הוא שריר שתפקידו להזרים דם לכל חלקי הגוף.", question: "מהו התפקיד העיקרי של הלב?", options: ["לנשום", "להזרים דם", "לעכל אוכל", "לחשוב"], answer: "להזרים דם" },
+            { fact: "העור הוא האיבר הגדול ביותר בגוף האדם.", question: "מהו האיבר הגדול ביותר בגוף?", options: ["הכבד", "העור", "הריאות", "המוח"], answer: "העור" },
+            { fact: "בגוף האדם הבוגר יש 206 עצמות.", question: "כמה עצמות יש באדם בוגר?", options: ["100", "206", "350", "500"], answer: "206" },
+            { fact: "השיניים הן החלק היחיד בגוף שלא יכול לתקן את עצמו.", question: "איזה חלק בגוף לא מתקן את עצמו?", options: ["שיניים", "עור", "עצמות", "שרירים"], answer: "שיניים" }
+        ]
+    },
+
+    // --- פיזיקה יומיומית ---
+    {
+        name: "פיזיקה מסביבנו",
+        type: "normal",
+        data: [
+            { fact: "החיכוך הוא הכוח שמונע מאיתנו להחליק על הרצפה.", question: "איזה כוח מונע החלקה?", options: ["חשמל", "חיכוך", "מגנטיות", "קרינה"], answer: "חיכוך" },
+            { fact: "הקול עובר באוויר כגל ואינו יכול לעבור בואקום.", question: "האם אפשר לשמוע קול בחלל הריק?", options: ["כן", "לא", "רק צעקות", "רק עם רדיו"], answer: "לא" },
+            { fact: "מראה מחזירה אור ובכך מאפשרת לנו לראות את עצמנו.", question: "איך עובדת מראה?", options: ["היא שוברת אור", "היא מחזירה אור", "היא בולעת אור", "היא מייצרת אור"], answer: "היא מחזירה אור" },
+            { fact: "האנרגיה לעולם לא נעלמת, היא רק מחליפה צורה.", question: "מה קורה לאנרגיה?", options: ["נעלמת", "נוצרת מכלום", "מחליפה צורה", "מתקררת"], answer: "מחליפה צורה" }
+        ]
+    },
+
+    // --- מצרים העתיקה ---
+    {
+        name: "סודות הפירמידות",
+        type: "normal",
+        data: [
+            { fact: "הפירמידות נבנו כקברים מפוארים לפרעוני מצרים.", question: "מה היה התפקיד של הפירמידות?", options: ["ארמונות", "מחסני מזון", "קברים", "מקדשי תפילה"], answer: "קברים" },
+            { fact: "הפירמידה הגדולה של גיזה נבנתה עבור המלך ח'ופו.", question: "עבור מי נבנתה הפירמידה הגדולה?", options: ["תות ענח' אמון", "ח'ופו", "רעמסס", "קליאופטרה"], answer: "ח'ופו" },
+            { fact: "הספינקס הוא פסל עם גוף אריה וראש אדם.", question: "איך נראה הספינקס?", options: ["גוף אדם וראש אריה", "גוף אריה וראש אדם", "גוף סוס", "ראש נשר"], answer: "גוף אריה וראש אדם" },
+            { fact: "הנילוס הוא הנהר שאיפשר את החיים במצרים העתיקה.", question: "איזה נהר זורם במצרים?", options: ["ירדן", "נילוס", "אמזונס", "פרת"], answer: "נילוס" }
+        ]
+    },
+    // 
+    // --- מתמטיקה בסיסית ---
+    {
+        name: "מתמטיקה וצורות (בונוס זמן!)",
+        type: "timed",
+        timeLimit: 20,
+        data: [
+            { fact: "סכום הזוויות במשולש הוא תמיד 180 מעלות.", question: "מה סכום הזוויות במשולש?", options: ["90", "180", "360", "270"], answer: "180" },
+            { fact: "מספר ראשוני מתחלק רק בעצמו וב-1.", question: "מהו מספר ראשוני?", options: ["מספר זוגי", "מתחלק רק ב-1 ובעצמו", "מספר שלילי", "מספר עגול"], answer: "מתחלק רק ב-1 ובעצמו" },
+            { fact: "המספר פאי (Pi) משמש לחישוב היקף מעגל.", question: "איזה קבוע משמש למעגלים?", options: ["פאי", "שורש 2", "אפס", "זהב"], answer: "פאי" },
+            { fact: "קו ישר הוא המרחק הקצר ביותר בין שתי נקודות.", question: "מהו המרחק הקצר ביותר בין נקודות?", options: ["זיגזג", "עיקול", "קו ישר", "קשת"], answer: "קו ישר" }
+        ]
+    },
+
+    // --- עולם החי ---
+    {
+        name: "עולם החיות",
+        type: "normal",
+        data: [
+            { fact: "הלווייתן הכחול הוא בעל החיים הגדול בעולם.", question: "מה החיה הכי גדולה?", options: ["פיל", "דינוזאור", "לווייתן כחול", "כריש"], answer: "לווייתן כחול" },
+            { fact: "הצ'יטה היא החיה המהירה ביותר על פני היבשה.", question: "מי רץ הכי מהר?", options: ["סוס", "אריה", "צ'יטה", "נמר"], answer: "צ'יטה" },
+            { fact: "הדבורים עוזרות להאביק פרחים ולייצר מזון.", question: "איזה חרק מאביק פרחים?", options: ["נמלה", "דבורה", "זבוב", "תיקן"], answer: "דבורה" },
+            { fact: "לקנגו יש כיס בבטנו בו הוא שומר את הגור שלו.", question: "איפה הקנגו שומר את הגור?", options: ["על הגב", "בכיס", "בפה", "במערה"], answer: "בכיס" }
+        ]
+    },
+
+    // --- חלל ---
+    {
+        name: "המסע לחלל",
+        type: "normal",
+        data: [
+            { fact: "השמש היא הכוכב הקרוב ביותר לכדור הארץ.", question: "מהי השמש?", options: ["כוכב לכת", "כוכב", "לוויין", "גלקסיה"], answer: "כוכב" },
+            { fact: "מאדים מכונה 'הפלנטה האדומה' בגלל חלודה בסלעיו.", question: "למה מאדים אדום?", options: ["חום", "חלודה", "צמחים", "אבק אדום"], answer: "חלודה" },
+            { fact: "הירח מסתובב סביב כדור הארץ פעם בחודש.", question: "סביב מה מסתובב הירח?", options: ["השמש", "כדור הארץ", "מאדים", "צדק"], answer: "כדור הארץ" },
+            { fact: "בחלל אין אוויר ולכן אסטרונאוטים צריכים חליפה.", question: "למה צריך חליפת חלל?", options: ["ליופי", "לחימום בלבד", "לאספקת חמצן", "לציפה"], answer: "לאספקת חמצן" }
+        ]
+    },
+    // 
+
+    // --- טכנולוגיה ---
+    {
+        name: "איך זה עובד?",
+        type: "normal",
+        data: [
+            { fact: "ה-Wi-Fi משתמש בגלי רדיו כדי להעביר אינטרנט.", question: "איך עובד Wi-Fi?", options: ["כבלים", "גלי רדיו", "לייזר", "לוויין"], answer: "גלי רדיו" },
+            { fact: "הסוללה הופכת אנרגיה כימית לחשמל.", question: "מה תפקיד הסוללה?", options: ["חום", "אחסון אנרגיה", "רדיו", "קירור"], answer: "אחסון אנרגיה" },
+            { fact: "מסך מגע מזהה לחיצה לפי שינוי בזרם חשמלי.", question: "איך המסך מזהה מגע?", options: ["חום", "צבע", "זרם חשמלי", "קול"], answer: "זרם חשמלי" },
+            { fact: "המיקרוגל מחמם על ידי הרעדת מולקולות מים.", question: "איך המיקרוגל מחמם?", options: ["אש", "הרעדת מים", "אור", "מגנטים"], answer: "הרעדת מים" }
+        ]
+    },
+
+    // --- גיאוגרפיה ---
+    {
+        name: "מסביב לעולם (בונוס זמן!)",
+        type: "timed",
+        timeLimit: 25,
+        data: [
+            { fact: "האמזונס הוא הנהר בעל כמות המים הגדולה בעולם.", question: "איזה נהר הכי גדול במים?", options: ["נילוס", "אמזונס", "ירדן", "דנובה"], answer: "אמזונס" },
+            { fact: "האוורסט הוא ההר הגבוה ביותר בעולם.", question: "מהו ההר הכי גבוה?", options: ["חרמון", "אוורסט", "קילימנג'רו", "אלפים"], answer: "אוורסט" },
+            { fact: "האוקיינוס השקט הוא האוקיינוס הגדול ביותר.", question: "מהו האוקיינוס הכי גדול?", options: ["האטלנטי", "השקט", "ההודי", "הקרח"], answer: "השקט" },
+            { fact: "בסין נמצאת החומה הגדולה בעולם.", question: "איפה נמצאת החומה הגדולה?", options: ["הודו", "סין", "יפן", "רוסיה"], answer: "סין" }
+        ]
+    },
+
+    // --- תזונה ---
+    {
+        name: "אוכל ובריאות",
+        type: "normal",
+        data: [
+            { fact: "ויטמין C נמצא בתפוזים ועוזר למערכת החיסון.", question: "באיזה פרי יש ויטמין C?", options: ["בננה", "תפוז", "תפוח", "אגס"], answer: "תפוז" },
+            { fact: "הגוף זקוק למים, מומלץ לשתות 8 כוסות ביום.", question: "מה המשקה הכי בריא?", options: ["קולה", "מיץ", "מים", "קפה"], answer: "מים" },
+            { fact: "סידן בונה עצמות חזקות ונמצא בחלב וגבינה.", question: "למה חשוב סידן?", options: ["שיער", "עצמות", "ראייה", "שמיעה"], answer: "עצמות" },
+            { fact: "פחמימות הן מקור האנרגיה העיקרי של הגוף.", question: "מה תפקיד הפחמימות?", options: ["שרירים", "אנרגיה", "קירור", "שינה"], answer: "אנרגיה" }
+        ]
+    },
+
+    // --- מזג אוויר ---
+    {
+        name: "מזג אוויר",
+        type: "normal",
+        data: [
+            { fact: "הקשת נוצרת משבירת אור השמש בטיפות הגשם.", question: "איך נוצרת קשת?", options: ["רוח", "שבירת אור", "עננים", "ברק"], answer: "שבירת אור" },
+            { fact: "הברק הוא זרם חשמלי חזק מהעננים.", question: "מהו הברק?", options: ["אור שמש", "חשמל", "קול", "אש"], answer: "חשמל" },
+            { fact: "הרוח נוצרת מהפרשי לחץ וטמפרטורה באוויר.", question: "מה גורם לרוח?", options: ["עצים", "גלים", "הפרשי לחץ", "סיבוב כדור הארץ"], answer: "הפרשי לחץ" },
+            { fact: "שלג נוצר כשטיפות מים קופאות בענן קר מאוד.", question: "ממה עשוי שלג?", options: ["צמר גפן", "קרח", "אבק", "סוכר"], answer: "קרח" }
+        ]
+    },
+
+    // --- המצאות ---
+    {
+        name: "המצאות גדולות",
+        type: "normal",
+        data: [
+            { fact: "תומאס אדיסון המציא את נורת החשמל הפרקטית.", question: "מי המציא את הנורה?", options: ["ניוטון", "אדיסון", "איינשטיין", "דרווין"], answer: "אדיסון" },
+            { fact: "הגלגל נחשב לאחת ההמצאות החשובות בהיסטוריה.", question: "איזו המצאה שינתה את התחבורה?", options: ["הגלגל", "הכפית", "הכיסא", "השעון"], answer: "הגלגל" },
+            { fact: "אלכסנדר גרהם בל המציא את הטלפון הראשון.", question: "מי המציא את הטלפון?", options: ["גוגל", "אפל", "גרהם בל", "מורס"], answer: "גרהם בל" },
+            { fact: "האחים רייט ביצעו את הטיסה הראשונה במטוס.", question: "מי המציא את המטוס?", options: ["האחים רייט", "דה וינצ'י", "פורד", "טסלה"], answer: "האחים רייט" }
+        ]
+    },
+
+    // --- מוזיקה ---
+    {
+        name: "עולם המוזיקה (בונוס זמן!)",
+        type: "timed",
+        timeLimit: 20,
+        data: [
+            { fact: "בפסנתר יש 88 קלידים לבנים ושחורים.", question: "כמה קלידים יש בפסנתר?", options: ["50", "88", "100", "120"], answer: "88" },
+            { fact: "הגיטרה היא כלי מיתר שבו פורטים על חוטים.", question: "איזה סוג כלי זה גיטרה?", options: ["נשיפה", "הקשה", "מיתר", "אלקטרוני"], answer: "מיתר" },
+            { fact: "התווים הם השפה שבה כותבים מוזיקה.", question: "איך קוראים לשפת המוזיקה?", options: ["מילים", "תווים", "מספרים", "ציורים"], answer: "תווים" },
+            { fact: "התופים הם כלי הקשה שקובעים את הקצב.", question: "מה תפקיד התופים?", options: ["מלודיה", "קצב", "שירה", "הרמוניה"], answer: "קצב" }
+        ]
+    },
+
+    // --- ימים מיוחדים ---
+    {
+        name: "לוח השנה",
+        type: "normal",
+        data: [
+            { fact: "בשנה רגילה יש 365 ימים.", question: "כמה ימים יש בשנה?", options: ["300", "350", "365", "400"], answer: "365" },
+            { fact: "כל 4 שנים יש 'שנה מעוברת' עם יום נוסף בפברואר.", question: "באיזה חודש מוסיפים יום בשנה מעוברת?", options: ["ינואר", "פברואר", "מרץ", "דצמבר"], answer: "פברואר" },
+            { fact: "בשבוע יש 7 ימים.", question: "כמה ימים יש בשבוע?", options: ["5", "6", "7", "8"], answer: "7" },
+            { fact: "ביממה יש 24 שעות.", question: "כמה שעות יש ביום ולילה?", options: ["12", "20", "24", "30"], answer: "24" }
+        ]
+    },
+
+    // --- בטיחות ---
+    {
+        name: "בטיחות בדרכים",
+        type: "normal",
+        data: [
+            { fact: "אור אדום ברמזור אומר לעצור מיד.", question: "מה עושים באדום?", options: ["נוסעים", "עוצרים", "מאטים", "מצפצפים"], answer: "עוצרים" },
+            { fact: "חגורת בטיחות מצילה חיים בזמן תאונה.", question: "מה חובה לחגור ברכב?", options: ["צעיף", "חגורת בטיחות", "תיק", "כלום"], answer: "חגורת בטיחות" },
+            { fact: "חוצים את הכביש רק במעבר חצייה.", question: "איפה חוצים כביש?", options: ["בכל מקום", "מעבר חצייה", "בין מכוניות", "בריצה"], answer: "מעבר חצייה" },
+            { fact: "קסדה מגנה על הראש בזמן רכיבה על אופניים.", question: "מה לובשים על הראש ברכיבה?", options: ["כובע", "קסדה", "סרט", "מטפחת"], answer: "קסדה" }
+        ]
+    },
+
+    // --- צמחים ---
+    {
+        name: "עולם הצמחים",
+        type: "normal",
+        data: [
+            { fact: "העלים הופכים אור שמש לאוכל בתהליך הפוטוסינתזה.", question: "איך צמח מכין אוכל?", options: ["שתייה", "פוטוסינתזה", "שינה", "אכילת אדמה"], answer: "פוטוסינתזה" },
+            { fact: "השורשים מחזיקים את הצמח וסופגים מים מהאדמה.", question: "מה תפקיד השורשים?", options: ["לנשום", "לספוג מים", "לייצר פרחים", "לצבוע"], answer: "לספוג מים" },
+            { fact: "העצים פולטים חמצן שאנחנו צריכים לנשימה.", question: "מה העצים נותנים לנו?", options: ["פחמן", "חמצן", "חנקן", "מימן"], answer: "חמצן" },
+            { fact: "הדבורים מעבירות אבקה מפרח לפרח כדי שיגדלו פירות.", question: "מי עוזר לפרחים להפוך לפרי?", options: ["הרוח בלבד", "חרקים (דבורים)", "השמש", "הגנן"], answer: "חרקים (דבורים)" }
+        ]
+    },
+
+    // --- ספורט ---
+    {
+        name: "ספורט ומשחקים (בונוס זמן!)",
+        type: "timed",
+        timeLimit: 20,
+        data: [
+            { fact: "בכדורגל משחקים 11 שחקנים בכל קבוצה.", question: "כמה שחקנים בקבוצת כדורגל?", options: ["5", "11", "15", "22"], answer: "11" },
+            { fact: "בכדורסל כל קליעה שווה 2 או 3 נקודות.", question: "כמה שווה קליעה רגילה בסל?", options: ["1", "2", "5", "10"], answer: "2" },
+            { fact: "המשחקים האולימפיים מתקיימים פעם ב-4 שנים.", question: "כל כמה זמן יש אולימפיאדה?", options: ["שנה", "שנתיים", "4 שנים", "10 שנים"], answer: "4 שנים" },
+            { fact: "בטניס משתמשים במחבט כדי להכות בכדור.", question: "באיזה מכשיר משתמשים בטניס?", options: ["מקל", "יד", "מחבט", "רגל"], answer: "מחבט" }
+        ]
+    },
+
+    // --- כימיה במטבח ---
+    {
+        name: "מדע במטבח",
+        type: "normal",
+        data: [
+            { fact: "מלח נמס במים והופך אותם למלוחים.", question: "מה קורה למלח במים?", options: ["נעלם", "נמס", "הופך לסוכר", "מתקשה"], answer: "נמס" },
+            { fact: "שמרים גורמים לבצק לתפוח ולהיות אוורירי.", question: "מה גורם ללחם לתפוח?", options: ["קמח", "שמרים", "מלח", "מים"], answer: "שמרים" },
+            { fact: "חומץ וסודה לשתייה יוצרים תגובה של קצף ובועות.", question: "מה קורה כשמערבבים חומץ וסודה?", options: ["פיצוץ", "קצף/בועות", "התאדות", "קיפאון"], answer: "קצף/בועות" },
+            { fact: "ביצה מתקשה כשמחממים אותה בגלל החלבונים.", question: "למה ביצה נהיית קשה בבישול?", options: ["קירור", "חימום חלבונים", "מלח", "זמן"], answer: "חימום חלבונים" }
+        ]
+    },
+
+    // --- אמנות ---
+    {
+        name: "צבעים ואמנות",
+        type: "normal",
+        data: [
+            { fact: "צבעי היסוד הם אדום, צהוב וכחול.", question: "איזה צבע הוא צבע יסוד?", options: ["ירוק", "סגום", "צהוב", "כתום"], answer: "צהוב" },
+            { fact: "ערבוב של אדום וצהוב יוצר כתום.", question: "איזה צבע יוצא מאדום וצהוב?", options: ["סגול", "ירוק", "כתום", "חום"], answer: "כתום" },
+            { fact: "ערבוב של כחול וצהוב יוצר ירוק.", question: "איך מקבלים ירוק?", options: ["אדום+כחול", "צהוב+כחול", "שחור+לבן", "אדום+לבן"], answer: "צהוב+כחול" },
+            { fact: "המונליזה היא ציור מפורסם של לאונרדו דה וינצ'י.", question: "מי צייר את המונליזה?", options: ["פיקאסו", "ואן גוך", "דה וינצ'י", "רמברנדט"], answer: "דה וינצ'י" }
+        ]
+    }
+    // ניתן להוסיף עוד שלבים באותו פורמט עד להגעה ל-50...
+];
+
+    // --- לוגיקה ---
+    let sIdx = 0, qIdx = 0, score = 0, isQuiz = false, selected = null, timer = null;
+
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); }
+
+    function init() {
+        const saved = localStorage.getItem('mindstep_v4');
+        if (saved) { const d = JSON.parse(saved); sIdx = d.s; score = d.sc; }
+        startStage();
+    }
+
+    function save() { localStorage.setItem('mindstep_v4', JSON.stringify({ s: sIdx, sc: score })); }
+
+    function startStage() {
+        qIdx = 0; isQuiz = false; selected = null;
+        document.getElementById('sec-quiz').classList.add('hidden');
+        document.getElementById('sec-victory').classList.add('hidden');
+        document.getElementById('ui-timer-box').classList.add('hidden');
+        document.getElementById('sec-learning').classList.remove('hidden');
+        updateUI();
+    }
+
+    function updateUI() {
+        const s = stages[sIdx];
+        document.getElementById('ui-stage-badge').innerText = `שלב ${sIdx + 1}`;
+        document.getElementById('side-stage-name').innerText = s.name;
+        document.getElementById('side-score').innerText = score;
+        document.getElementById('ui-title').innerText = isQuiz ? "מבחן שלב" : `למידה: ${s.name}`;
+        document.getElementById('ui-progress').style.width = ((qIdx + 1) / s.data.length * 100) + "%";
+
+        if (!isQuiz) document.getElementById('ui-fact').innerText = s.data[qIdx].fact;
+        else renderQuiz();
+    }
+
+    function nextFact() {
+        if (qIdx < stages[sIdx].data.length - 1) { qIdx++; updateUI(); }
+        else { isQuiz = true; qIdx = 0; 
+               document.getElementById('sec-learning').classList.add('hidden');
+               document.getElementById('sec-quiz').classList.remove('hidden');
+               if(stages[sIdx].type === 'timed') startTimer();
+               updateUI();
+        }
+    }
+
+    function startTimer() {
+        let t = stages[sIdx].timeLimit;
+        document.getElementById('ui-timer-box').classList.remove('hidden');
+        document.getElementById('ui-time').innerText = t;
+        timer = setInterval(() => {
+            t--; document.getElementById('ui-time').innerText = t;
+            if(t <= 0) { clearInterval(timer); alert("נגמר הזמן!"); startStage(); }
+        }, 1000);
+    }
+
+    function renderQuiz() {
+        const item = stages[sIdx].data[qIdx];
+        document.getElementById('ui-question').innerText = item.question;
+        const box = document.getElementById('ui-options');
+        box.innerHTML = "";
+        item.options.forEach(o => {
+            const d = document.createElement('div');
+            d.className = `option-item ${selected === o ? 'selected' : ''}`;
+            d.innerText = o;
+            d.onclick = () => { selected = o; updateUI(); };
+            box.appendChild(d);
+        });
+    }
+
+    function checkQuiz() {
+        if(!selected) return;
+        const item = stages[sIdx].data[qIdx];
+        const f = document.getElementById('ui-feedback');
+        if (selected === item.answer) {
+            score += 10; f.innerText = "✅ נכון!"; f.className = "text-success text-center my-3 fw-bold";
+            setTimeout(() => {
+                f.innerText = ""; selected = null;
+                if (qIdx < stages[sIdx].data.length - 1) { qIdx++; updateUI(); }
+                else finishStage();
+            }, 800);
+        } else {
+            f.innerText = "❌ טעות. נלמד שוב."; f.className = "text-danger text-center my-3 fw-bold";
+            setTimeout(() => { f.innerText = ""; startStage(); }, 1200);
+        }
+    }
+
+    function finishStage() {
+        clearInterval(timer);
+        document.getElementById('sec-quiz').classList.add('hidden');
+        document.getElementById('sec-victory').classList.remove('hidden');
+        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+        document.getElementById('ui-victory-msg').innerText = `השלמת את שלב ${stages[sIdx].name}!`;
+        sIdx++; save();
+        if (sIdx >= stages.length) {
+            document.getElementById('sec-victory').innerHTML = `<h2>🏆 סיימת הכל! 🏆</h2><p class='h4'>ניקוד סופי: ${score}</p><button class='btn btn-primary mt-4' onclick='resetGame()'>התחל מחדש</button>`;
+        }
+    }
+
+    function startNextStage() { startStage(); }
+    function resetGame() { if(confirm("לאפס הכל?")) { localStorage.removeItem('mindstep_v4'); location.reload(); } }
+
+    init();
+</script>
+</body>
+</html>
